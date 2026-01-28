@@ -1,109 +1,134 @@
 // Import React và các hook cần dùng
-import React, { useEffect, useState } from 'react';
-// Import file style
-import './index.less';
+import React, { useState, useEffect } from 'react';
 
-// Interface mô tả cấu trúc 1 công việc (Todo)
-interface Todo {
-  id: number;     // ID duy nhất của todo
-  text: string;   // Nội dung công việc
-}
+// Import các component từ Ant Design
+import { Card, InputNumber, Button, Typography, Space, message } from 'antd';
 
-// Component TodoList
-const TodoList: React.FC = () => {
-  // State lưu danh sách todo
-  const [todos, setTodos] = useState<Todo[]>([]);
-  // State lưu giá trị input
-  const [input, setInput] = useState('');
-  // State lưu id todo đang chỉnh sửa (null nếu không sửa)
-  const [editingId, setEditingId] = useState<number | null>(null);
+// Tách các component chữ cho gọn
+const { Title, Text } = Typography;
 
-  // useEffect chạy 1 lần khi component mount
-  // Dùng để load dữ liệu từ localStorage
+// Số lượt đoán tối đa
+const MAX_TURN = 10;
+
+// Component chính của Bài 1 – Đoán số
+const Bai1DoanSo: React.FC = () => {
+
+  // Số ngẫu nhiên hệ thống sinh ra
+  const [randomNumber, setRandomNumber] = useState<number>(0);
+
+  // Số người chơi nhập
+  const [guess, setGuess] = useState<number | null>(null);
+
+  // Số lượt đã đoán
+  const [turn, setTurn] = useState<number>(0);
+
+  // Trạng thái kết thúc game hay chưa
+  const [finished, setFinished] = useState<boolean>(false);
+
+  // useEffect chạy 1 lần khi component được render lần đầu
+  // Dùng để khởi tạo game
   useEffect(() => {
-    const data = localStorage.getItem('todos');
-    if (data) {
-      setTodos(JSON.parse(data));
-    }
+    resetGame();
   }, []);
 
-  // useEffect chạy mỗi khi todos thay đổi
-  // Lưu danh sách todo vào localStorage
-  useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos));
-  }, [todos]);
+  // Hàm reset game
+  const resetGame = () => {
+    // Sinh số ngẫu nhiên từ 1 đến 100
+    const number = Math.floor(Math.random() * 100) + 1;
 
-  // Hàm thêm mới hoặc cập nhật todo
-  const handleAddOrEdit = () => {
-    // Không cho thêm nếu input rỗng
-    if (!input.trim()) return;
+    // Cập nhật lại toàn bộ trạng thái
+    setRandomNumber(number);
+    setGuess(null);
+    setTurn(0);
+    setFinished(false);
+  };
 
-    // Trường hợp đang chỉnh sửa
-    if (editingId !== null) {
-      setTodos(
-        todos.map(todo =>
-          todo.id === editingId
-            ? { ...todo, text: input } // cập nhật nội dung
-            : todo
-        )
-      );
-      setEditingId(null); // thoát chế độ sửa
-    } else {
-      // Trường hợp thêm mới
-      setTodos([...todos, { id: Date.now(), text: input }]);
+  // Hàm xử lý khi bấm nút "Đoán"
+  const handleGuess = () => {
+
+    // Nếu chưa nhập số
+    if (guess === null) {
+      message.warning('Vui lòng nhập số!');
+      return;
     }
 
-    // Reset input sau khi thêm / sửa
-    setInput('');
+    // Nếu game đã kết thúc thì không cho đoán nữa
+    if (finished) return;
+
+    // Tăng số lượt đoán
+    const newTurn = turn + 1;
+    setTurn(newTurn);
+
+    // Trường hợp đoán đúng
+    if (guess === randomNumber) {
+      message.success('🎉 Chúc mừng! Bạn đã đoán đúng!');
+      setFinished(true);
+      return;
+    }
+
+    // Trường hợp đoán sai
+    if (guess < randomNumber) {
+      message.info('Bạn đoán quá thấp!');
+    } else {
+      message.info('Bạn đoán quá cao!');
+    }
+
+    // Hết lượt chơi
+    if (newTurn >= MAX_TURN) {
+      message.error(`Bạn đã hết lượt! Số đúng là ${randomNumber}`);
+      setFinished(true);
+    }
   };
 
-  // Hàm xử lý khi bấm nút sửa
-  const handleEdit = (todo: Todo) => {
-    setInput(todo.text);     // đổ nội dung todo vào input
-    setEditingId(todo.id);   // lưu id todo đang sửa
-  };
-
-  // Hàm xoá todo theo id
-  const handleDelete = (id: number) => {
-    setTodos(todos.filter(todo => todo.id !== id));
-  };
-
+  // Giao diện hiển thị
   return (
-    <div className="todo-container">
-      <h2>Bài 2 - TodoList</h2>
+    <Card
+      style={{
+        maxWidth: 420,
+        margin: '60px auto',
+        textAlign: 'center',
+      }}
+    >
+      {/* Tiêu đề */}
+      <Title level={3}>Game Đoán Số</Title>
 
-      {/* Khu vực nhập công việc */}
-      <div className="todo-input">
-        <input
-          placeholder="Nhập công việc..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
+      {/* Mô tả luật chơi */}
+      <Text>
+        Hệ thống đã sinh một số từ <b>1 đến 100</b>
+        <br />
+        Bạn có tối đa <b>{MAX_TURN}</b> lượt đoán
+      </Text>
+
+      {/* Các thành phần nhập liệu và nút bấm */}
+      <Space direction="vertical" size="middle" style={{ width: '100%', marginTop: 20 }}>
+        
+        {/* Ô nhập số */}
+        <InputNumber
+          min={1}
+          max={100}
+          value={guess}
+          onChange={(value) => setGuess(value)}
+          placeholder="Nhập số bạn đoán"
+          style={{ width: '100%' }}
+          disabled={finished}
         />
-        <button onClick={handleAddOrEdit}>
-          {editingId ? 'Cập nhật' : 'Thêm'}
-        </button>
-      </div>
 
-      {/* Danh sách công việc */}
-      <ul className="todo-list">
-        {todos.map(todo => (
-          <li key={todo.id}>
-            <span>{todo.text}</span>
-            <div className="actions">
-              <button onClick={() => handleEdit(todo)}>Sửa</button>
-              <button
-                className="delete"
-                onClick={() => handleDelete(todo.id)}
-              >
-                Xóa
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+        {/* Nhóm nút bấm */}
+        <Space>
+          <Button type="primary" onClick={handleGuess} disabled={finished}>
+            Đoán
+          </Button>
+          <Button onClick={resetGame}>
+            Chơi lại
+          </Button>
+        </Space>
+
+        {/* Hiển thị số lượt đã dùng */}
+        <Text>Số lượt đã dùng: {turn}/{MAX_TURN}</Text>
+      </Space>
+    </Card>
   );
 };
 
 // Export component
-export default TodoList;
+export default Bai1DoanSo;
